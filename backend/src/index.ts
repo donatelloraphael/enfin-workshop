@@ -23,7 +23,7 @@ app.post('/books', async (req, res) => {
     return res.status(400).json({ error: error.details[0].message });
   }
 
-  const { name, description, publishDate, price } = req.body;
+  const { name, description, publishDate, price } = value;
   try {
     const newBook = await prisma.book.create({
       data: {
@@ -33,16 +33,49 @@ app.post('/books', async (req, res) => {
         price,
       },
     });
-    res.json(newBook);
+    res.json({ data: newBook });
   } catch (error: any) {
     res.status(400).json({ error: `Failed to create a new book: ${error.message}` });
   }
 });
 
+const booksListSchema = Joi.object({
+  name: Joi.string().optional(),
+  description: Joi.string().optional(),
+}).min(0)
+
 app.get('/books', async (req, res) => {
+  const { error, value } = booksListSchema.validate(req.query, { allowUnknown: true, stripUnknown: true });
+
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
+  }
+
+  const { name, description } = value;
+
+  let queryConditions = {};
+
+  if (name) {
+    queryConditions = {
+      ...queryConditions,
+      name: {
+        contains: name,
+      },
+    };
+  }
+
+  if (description) {
+    queryConditions = {
+      ...queryConditions,
+      description: {
+        contains: description,
+      },
+    };
+  }
+
   try {
-    const books = await prisma.book.findMany();
-    res.json(books);
+    const books = await prisma.book.findMany({ where: queryConditions });
+    res.json({ data: books });
   } catch (error: any) {
     res.status(400).json({ error: `Failed to fetch books: ${error.message}` });
   }
@@ -60,7 +93,7 @@ app.get('/books/:id', async (req, res) => {
       where: { id: Number(id) },
     });
     if (book) {
-      res.json(book);
+      res.json({ data: book });
     } else {
       res.status(404).json({ error: 'Book not found' });
     }
@@ -102,7 +135,7 @@ app.put('/books/:id', async (req, res) => {
       data: updateData,
     });
 
-    res.json(updatedBook);
+    res.json({ data: updatedBook });
   } catch (error: any) {
     res.status(400).json({ error: `Failed to update the book: ${error.message}` });
   }
@@ -114,7 +147,7 @@ app.delete('/books/:id', async (req, res) => {
   if (!id || isNaN(Number(id))) {
     return res.status(400).json({ error: 'Invalid book ID' });
   }
-  
+
   try {
     await prisma.book.delete({
       where: { id: Number(id) },
