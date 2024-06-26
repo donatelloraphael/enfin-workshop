@@ -1,12 +1,14 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import Joi from 'joi';
+import cors from 'cors';
 dotenv.config();
 import { Book, PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 
 const bookSchema = Joi.object({
