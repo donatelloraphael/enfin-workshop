@@ -42,6 +42,8 @@ app.post('/books', async (req, res) => {
 const booksListSchema = Joi.object({
   name: Joi.string().optional(),
   description: Joi.string().optional(),
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number().integer().min(1).optional(),
 }).min(0)
 
 app.get('/books', async (req, res) => {
@@ -51,7 +53,8 @@ app.get('/books', async (req, res) => {
     return res.status(400).json({ error: error.details[0].message });
   }
 
-  const { name, description } = value;
+  const { name, description, page = 1, limit = 10 } = value;
+  const skip = (page - 1) * limit;
 
   let queryConditions = {};
 
@@ -74,7 +77,7 @@ app.get('/books', async (req, res) => {
   }
 
   try {
-    const books = await prisma.book.findMany({ where: queryConditions });
+    const books = await prisma.book.findMany({ where: queryConditions, skip, take: limit });
     res.json({ data: books });
   } catch (error: any) {
     res.status(400).json({ error: `Failed to fetch books: ${error.message}` });
